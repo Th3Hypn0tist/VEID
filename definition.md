@@ -11,7 +11,8 @@ VEID is a closed mechanical system that generates net thrust by asymmetrically v
 • No exhaust  
 • No external reaction mass  
 • Works in vacuum  
-• Patent-pending concept  
+• Patent-pending concept
+• Just little electricity
 
 > "I didn’t break Newton’s laws — I just made them work harder."  
 > — Aki Hirvilammi, 2025  
