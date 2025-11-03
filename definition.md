@@ -120,24 +120,6 @@ void loop() {
 }  
 
 ────────────────────────────────────────────────────────────  
-X POST (Copy-Paste Ready)  
-────────────────────────────────────────────────────────────  
-
-I just built a reactionless drive using ONLY Newton's laws.  
-
-No fuel. No exhaust. No moving parts outside the system.  
-
-It levitates 10 kg in my garage.  
-
-Video: [link]  
-Patent: [link]  
-Physics: [link]  
-
-@elonmusk @NASA — want to test it in vacuum?  
-
-#VEID #InertialDrive #NewtonWasRight  
-
-────────────────────────────────────────────────────────────  
 PHYSICS CALCULATOR (Excel)  
 ────────────────────────────────────────────────────────────  
 
