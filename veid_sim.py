@@ -1,65 +1,57 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# VEID – Variable Eccentricity Inertial Drive Sim (Updated v1.0)
-# Aki Hirvilammi, 2025 – Asymmetry: 90° extension + snap to zero + 270° low retract
+# --- VEID: Aki Hirvilammi 2025 – "Snap + Slow Retract" ---
+f1 = 10.0           # Kierrosta / s (10 Hz = 600 RPM)
+r_max = 0.10        # Ulkona [m]
+r_min = 0.01        # Sisällä [m]
+m = 1.0             # Massa [kg]
+T = 10.0            # Simulaatioaika [s]
+fs = 1000           # Näytteistys [Hz]
+dt = 1/fs
+N = int(T * fs)
+t = np.linspace(0, T, N)
 
-# Parameters
-f1 = 50.0        # Outer rotation [Hz]
-slip_slow = 10.0 # Retract slip [Hz]
-slip_fast = 100.0 # Extension slip [Hz]
-r_min = 0.01     # Retract radius [m]
-r_max = 0.10     # Extension radius [m]
-m = 1.0          # Mass [kg]
-friction_coeff = 0.05 # Friction loss [fraction per cycle]
-Tsim = 2.0       # Sim time [s]
-fs = 1000        # Sampling [Hz]
+# Vaihekulmat
+theta = 2 * np.pi * f1 * t  # Ulkopyörintä
+theta_mod = theta % (2 * np.pi)
 
-# Derived
-dt = 1.0 / fs
-N = int(round(Tsim * fs))
-t = np.arange(N) * dt
-twopi = 2 * np.pi
-
-# Signals
-r = np.zeros(N)
+# --- 1. 90°: Uloshyppy (nopea, 100 Hz vastaava) ---
+# --- 2. Snap nollaan ---
+# --- 3. 270°: Hidas kelaus (vauhti hidastuu 100 → 5 Hz ennen nollaa) ---
+r = np.full(N, r_min)
 F_cent = np.zeros(N)
-F_net = np.zeros(N)
-p_cum = np.zeros(N)
+p = np.zeros(N)
 
-th1_c = 0.0  # Outer phase [cycles]
-
-for n in range(N):
-    th1_c += f1 * dt
-    th1_c -= np.floor(th1_c)
-    phir = th1_c * twopi  # Current phase [rad]
-
-    # Extension sector: 90° (pi/2 rad) – high r
-    if np.sin(phir) > 0:  # Simplified 90° window (sin >0 for "upper half")
-        r[n] = r_max
-        f2n = f1 + slip_fast
+for i in range(N):
+    phi = theta_mod[i]
+    
+    # --- ULOSHYPY: 0° → 90° (ensin 90° ikkuna) ---
+    if 0 <= phi < np.pi/2:
+        r[i] = r_max
+        omega_eff = 2 * np.pi * (f1 + 90)  # Nopea pulssi (~100 Hz)
+    
+    # --- SNAP NOLLAAN: 90° tarkalleen ---
+    elif np.pi/2 <= phi < np.pi/2 + 0.01:
+        r[i] = r_min
+        omega_eff = 0  # Snap = äkillinen pysäytys
+    
+    # --- HIDAS KELAUS: 90° → 360° (270°), vauhti hidastuu ---
     else:
-        r[n] = r_min
-        f2n = f1 + slip_slow
+        # Hidas kelaus: slip laskee lineaarisesti 100 → 5 Hz
+        progress = (phi - np.pi/2) / (3 * np.pi / 2)  # 0 → 1
+        slip = 100 * (1 - progress) + 5 * progress
+        omega_eff = 2 * np.pi * (f1 + slip)
+        r[i] = r_min
+    
+    # Keskipakovoima
+    F_cent[i] = m * omega_eff**2 * r[i]
+    
+    # Netto momentum (unidirectional)
+    if i > 0:
+        p[i] = p[i-1] + F_cent[i] * dt
 
-    # Centrifugal force
-    F_cent[n] = m * (twopi * f1)**2 * r[n]
-
-    # Friction (proportional to F_cent in retract)
-    friction = friction_coeff * F_cent[n] if r[n] == r_min else 0
-    F_net[n] = F_cent[n] - friction
-
-    # Cumulative momentum (unidirectional bias – no negative)
-    p_cum[n] = p_cum[n-1] if n > 0 else 0 + F_net[n] * dt
-
-print("Net Thrust Proxy: Mean F_net =", np.mean(F_net), "N")
-print("Cumulative Momentum: p_cum =", p_cum[-1], "N·s")
-
-# Plots (Comment out for no display)
-plt.figure(figsize=(10, 8))
-plt.subplot(2,2,1); plt.plot(t, r); plt.title('r(t) – Radius'); plt.ylabel('r [m]')
-plt.subplot(2,2,2); plt.plot(t, F_cent); plt.title('F_cent(t)'); plt.ylabel('F [N]')
-plt.subplot(2,2,3); plt.plot(t, F_net); plt.title('F_net(t) – with Friction'); plt.ylabel('F [N]')
-plt.subplot(2,2,4); plt.plot(t, p_cum); plt.title('Cumulative p(t)'); plt.ylabel('p [N·s]')
-plt.tight_layout()
-plt.show()
+# --- Tulokset ---
+print(f"Netto momentum (10 s): {p[-1]:.3f} N·s")
+print(f"Keskim. F_net: {np.mean(F_cent):.3f} N")
+print(f"Maksimi F: {np.max(F_cent):.1f} N")
